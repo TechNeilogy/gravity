@@ -1,11 +1,10 @@
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as py
 from matplotlib import animation
 import math
+matplotlib.use("TkAgg")
 
 # Represents the smallest considered distance value.
 # Prevents division by zero when calculating attractions
@@ -50,10 +49,10 @@ scat = ax.scatter(x, y, s=1, c=(0.2, 0.2, 0.5, 0.3))
 # things tend to work best if mass
 # does not vary too widely.
 mass = np.random.uniform(0.8, 1.0, star_count)
-#mass = np.random.normal(0.7, 0.3, star_count)
+# mass = np.random.normal(0.7, 0.3, star_count)
 
 # Cache some things related to mass.
-mass_max = mass.max()
+mass_max = mass.max(initial=0)
 mass_mean = mass.mean()
 mass_fraction = mass / mass.sum()
 massSums = np.add.outer(mass, mass)
@@ -61,8 +60,9 @@ massSums = np.add.outer(mass, mass)
 # "net" hold the net motion of each star,
 # all things considered.
 # At the start, there is no motion.
-x_net = np.zeros((star_count))
-y_net = np.zeros((star_count))
+x_net = np.zeros(star_count)
+y_net = np.zeros(star_count)
+
 
 # Because some initial distributions may
 # be off-center, or because of later
@@ -72,13 +72,14 @@ y_net = np.zeros((star_count))
 # the center of mass.
 def center_mass():
 
-    global  x, y
+    global x, y
 
     x_mass_center = np.sum(x * mass_fraction)
     y_mass_center = np.sum(y * mass_fraction)
 
     x = (x - x_mass_center) + width_2
     y = (y - y_mass_center) + width_2
+
 
 # Creates an initial distribution of stars
 # having random clusters.
@@ -114,6 +115,7 @@ def hot_spots(spot_count):
         x[p] = math.sin(polar_angle_xy[p]) * polar_distance[p] + h_x[spot]
         y[p] = math.cos(polar_angle_xy[p]) * polar_distance[p] + h_y[spot]
 
+
 # Creates an initial distribution of stars
 # in a uniform rectangle.
 def rectangle(
@@ -128,6 +130,7 @@ def rectangle(
     x = np.random.uniform(0.5 - x_size, 0.5 + x_size, star_count)
     y = np.random.uniform(0.5 - y_size, 0.5 + y_size, star_count)
 
+
 # Create the scatter graph.
 graph = ax.scatter(
     x,
@@ -140,6 +143,7 @@ graph = ax.scatter(
 # rectangle(0.5, 0.5)
 hot_spots(5)
 center_mass()
+
 
 # Animation callback.
 def animate(_frame):
@@ -197,6 +201,7 @@ def animate(_frame):
     graph.set_offsets(data)
 
     return graph,
+
 
 # Start the animation loop.
 anim = animation.FuncAnimation(
