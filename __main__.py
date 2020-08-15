@@ -169,6 +169,13 @@ def animate(_frame):
 
     distances = xd * xd + yd * yd + distance_epsilon
 
+    # Experiment with weird things,
+    # like repulsion at close distances!
+    # rev = -0.00000001
+    # distances = xd * xd + yd * yd + rev
+    # mask = distances == 0
+    # distances[mask] = rev
+
     # Divide each pair of mass sums, by the distance.
     # Multiply by an empirically-determined scaling factor.
 
