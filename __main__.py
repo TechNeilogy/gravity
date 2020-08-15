@@ -85,6 +85,8 @@ def center_mass():
 # having random clusters.
 def hot_spots(spot_count):
 
+    # Make spot_count "super clusters."
+
     h_x = np.zeros(spot_count)
     h_y = np.zeros(spot_count)
 
@@ -100,6 +102,8 @@ def hot_spots(spot_count):
         h_x[p] = math.sin(h_polar_angle_xy[p]) * h_polar_distance[p] + width_2
         h_y[p] = math.cos(h_polar_angle_xy[p]) * h_polar_distance[p] + width_2
 
+    # Make smaller clusters around each "super cluster."
+    
     global x, y
 
     polar_angle_xy = np.random.rand(star_count) * np.pi * 2
