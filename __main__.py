@@ -1,10 +1,12 @@
+import math
 import matplotlib
+from matplotlib import animation
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as py
-from matplotlib import animation
-import math
 matplotlib.use("TkAgg")
+
+# First, I'll set some constants
+# at the top of the file, for convenience.
 
 # Represents the smallest considered distance value.
 # Prevents division by zero when calculating attractions
@@ -29,35 +31,57 @@ width = 1.0
 # Display center.
 width_2 = width / 2
 
-# Setup the figure.
-fig = py.figure(1, figsize=(5, 5))
+# Setup the figure in pyplot.
+fig = plt.figure(1, figsize=(5, 5))
 fig.patch.set_facecolor((0.1, 0.1, 0.1, 1))
 
-# Set up the axis.
-ax = py.axes(xlim=(0, width), ylim=(0, width))
+# Set up the axes.
+ax = plt.axes(xlim=(0, width), ylim=(0, width))
 ax.set_facecolor((0.0, 0.0, 0.0, 1))
 
 # Make some star X, Y positions.
+#
+# Note that x and y are vectors of length star_count.
+# As a general rule, things associated with each star
+# will be kept in vectors, with the vector index
+# being the star ID.
+#
+# These will be initialized later,
+# but creating them here lets us
+# go ahead and add them to the plot.
 x = np.zeros(star_count)
 y = np.zeros(star_count)
 
 # Add the stars to the axis.
+# The colors and alpha can be adjusted
+# depending on your preferences.
 scat = ax.scatter(x, y, s=1, c=(0.2, 0.2, 0.5, 0.3))
 
 # Assign a mass to each star.
 # With the number of stars being so low,
+# and mass being handled by a fudge factor,
 # things tend to work best if mass
 # does not vary too widely.
 mass = np.random.uniform(0.8, 1.0, star_count)
-# mass = np.random.normal(0.7, 0.3, star_count)
 
 # Cache some things related to mass.
 mass_max = mass.max(initial=0)
 mass_mean = mass.mean()
+# Fraction of the total mass in each star.
 mass_fraction = mass / mass.sum()
-massSums = np.add.outer(mass, mass)
+# Matrix of product of all possible mass pairs.
+massProds = np.outer(mass, mass)
 
-# "net" hold the net motion of each star,
+# Expanded, the above might look like this:
+#
+#     for si0 in range(0, len(mass))
+#         for si1 in range(0, len(mass))
+#             massProds[si0][si1] = mass[si0] * mass[si1]
+#
+# This is very slow in Python.
+# NumPy computes the above in C, which is much faster.
+
+# "net" holds the net motion of each star,
 # all things considered.
 # At the start, there is no motion.
 x_net = np.zeros(star_count)
@@ -81,10 +105,13 @@ def center_mass():
     y = (y - y_mass_center) + width_2
 
 
-# Creates an initial distribution of stars
-# having random clusters.
-def hot_spots(spot_count):
+# These next few functions can be used to initialize
+# the star XY positions to various configurations.
 
+# Creates an initial distribution of stars having random clusters.
+def hot_spots(
+        spot_count
+):
     # Make spot_count "super clusters."
 
     h_x = np.zeros(spot_count)
@@ -120,8 +147,7 @@ def hot_spots(spot_count):
         y[p] = math.cos(polar_angle_xy[p]) * polar_distance[p] + h_y[spot]
 
 
-# Creates an initial distribution of stars
-# in a uniform rectangle.
+# Creates an initial distribution of stars in a uniform rectangle.
 def rectangle(
         x_size,
         y_size
@@ -135,7 +161,43 @@ def rectangle(
     y = np.random.uniform(0.5 - y_size, 0.5 + y_size, star_count)
 
 
+# Creates an initial distribution of stars in a circle.
+#
+# If normal is False:
+#     Create a ring of stars where the radius is uniformly distributed
+#     between a and b.
+#
+# If normal is True:
+#     Create a ring of stars where the mean radius of the ring is (a + b) / 2,
+#     and the standard deviation is (b - a).
+#
+def circle(
+        a,
+        b,
+        normal,
+        star_min,
+        star_max
+):
+    global x, y
+
+    if normal:
+        func = np.random.normal
+        a0 = (a + b) / 2
+        b = (b - a)
+        a = a0
+    else:
+        func = np.random.uniform
+
+    for p in range(star_min, star_max):
+        h_polar_angle_xy = np.random.uniform(0, np.pi * 2)
+        h_polar_distance = func(a, b)
+        x[p] = math.sin(h_polar_angle_xy) * h_polar_distance
+        y[p] = math.cos(h_polar_angle_xy) * h_polar_distance
+
+
 # Create the scatter graph.
+# The colors and alpha can be adjusted
+# depending on your preferences.
 graph = ax.scatter(
     x,
     y,
@@ -144,10 +206,18 @@ graph = ax.scatter(
 )
 
 # Initialize the stars.
-# rectangle(0.5, 0.5)
 hot_spots(5)
-center_mass()
+# Various interesting intializations:
+# rectangle(0.5, 0.5)
+# rectangle(0.01, 0.6)
+# circle(0.1, 0.105, True, 0, star_count)
+# three = star_count // 3
+# circle(0.35, 0.351, True, 0, three)
+# circle(0.20, 0.201, True, three, three * 2)
+# circle(0.37, 0.371, True, three * 2, star_count)
 
+# Center the mass in the view.
+center_mass()
 
 # Animation callback.
 def animate(_frame):
@@ -155,7 +225,7 @@ def animate(_frame):
     global graph
     global x, y
     global x_net, y_net
-    global massSums
+    global massProds
 
     # Generate x, y, distance matrices from the vectors.
     # Note that this is a little wasteful,
@@ -176,10 +246,10 @@ def animate(_frame):
     # mask = distances == 0
     # distances[mask] = rev
 
-    # Divide each pair of mass sums, by the distance.
+    # Divide each pair of mass sums by the distance.
     # Multiply by an empirically-determined scaling factor.
 
-    attraction = massSums / distances * attraction_scale
+    attraction = massProds / distances * attraction_scale
 
     # Compute the sums of the distances and the attractions.
     # Note that everything is added twice,
